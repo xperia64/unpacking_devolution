@@ -45,3 +45,8 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+*.swp
+*.swo
+put_gc_devo_src_zip_here/*
+!put_gc_devo_src_zip_here/put_gc_devo_src_zip_here
