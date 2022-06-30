@@ -1,0 +1,21 @@
+FROM devkitpro/devkitppc
+
+ARG USER_ID
+ARG GROUP_ID
+RUN addgroup --gid $GROUP_ID user
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN set -x && \
+  apt-get update -y && \
+  apt-get install -y --no-install-recommends patch
+
+WORKDIR /devo
+RUN chown user:user /devo
+USER user
+ADD ./docker/build_dol.sh .
+ADD ./patches/main.patch .
+RUN mkdir shared

@@ -1,0 +1,88 @@
+diff -Naur a/main.c b/main.c
+--- a/main.c	2015-08-16 23:51:12.000000000 +0000
++++ b/main.c	2022-06-30 02:36:00.453876388 +0000
+@@ -105,6 +105,7 @@
+ 	int select=0;
+ 	DIR *dir;
+ 	struct dirent *entry;
++	char dir_path[256];
+ 	char full_path[256];
+ 	int data_fd;
+ 	u8 *lowmem = (u8*)0x80000000;
+@@ -120,12 +121,25 @@
+ 	// count how many .iso files exist
+ 	while ((entry = readdir(dir)))
+ 	{
+-		size_t length = strlen(entry->d_name);
+-		if (length > 4 && stricmp(entry->d_name+length-4, ".ISO")==0)
++		if (entry->d_type == DT_REG)
+ 		{
+-			if (!count)
+-				strcpy(full_path, entry->d_name);
+-			count++;
++			size_t length = strlen(entry->d_name);
++			if (length > 4 && strcasecmp(entry->d_name+length-4, ".ISO")==0)
++			{
++				if (!count)
++					strcpy(full_path, entry->d_name);
++				count++;
++			}
++		}
++		else if (entry->d_type == DT_DIR)
++		{
++			snprintf(dir_path, sizeof(dir_path), "disk:/%s/%s/game.iso", dirname, entry->d_name);
++			if (!stat(dir_path, &st))
++			{
++				if (!count)
++					snprintf(full_path, sizeof(full_path), "%s/game.iso", entry->d_name);
++				count++;
++			}
+ 		}
+ 	}
+ 
+@@ -167,11 +181,25 @@
+ 			index = 0;
+ 			while ((entry = readdir(dir)))
+ 			{
+-				size_t length = strlen(entry->d_name);
+-				if (length > 4 && stricmp(entry->d_name+length-4, ".ISO")==0 && select==index++)
+-					break;
++				if (entry->d_type == DT_REG)
++				{
++					size_t length = strlen(entry->d_name);
++					if (length > 4 && strcasecmp(entry->d_name+length-4, ".ISO")==0 && select==index++)
++					{
++						printf("\rSelect Game: <%s>\x1b[K", entry->d_name);
++						break;
++					}
++				}
++				else if (entry->d_type == DT_DIR)
++				{
++					snprintf(dir_path, sizeof(full_path), "disk:/%s/%s/game.iso", dirname, entry->d_name);
++					if (!stat(dir_path, &st) && select==index++)
++					{
++						printf("\rSelect Game: <%s/game.iso>\x1b[K", entry->d_name);
++						break;
++					}
++				}
+ 			}
+-			printf("\rSelect Game: <%s>\x1b[K", entry->d_name);
+ 		} while (!(pressed & INPUT_BUTTON_OK));
+ 		printf("\n");
+ 
+@@ -201,7 +229,14 @@
+ 		if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+ 			DEVO_CONFIG->options |= CONFIG_CROP_OVERSCAN;
+ 
+-		sprintf(full_path, "disk:/%s/%s", dirname, entry->d_name);
++		if (entry->d_type == DT_REG)
++		{
++			sprintf(full_path, "disk:/%s/%s", dirname, entry->d_name);
++		}
++		else
++		{
++			strcpy(full_path, dir_path);
++		}
+ 
+ 		// get the FAT starting cluster (and device ID) for the ISO file
+ 		stat(full_path, &st);

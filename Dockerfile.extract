@@ -1,0 +1,28 @@
+FROM ubuntu:20.04
+
+ARG USER_ID
+ARG GROUP_ID
+
+RUN addgroup --gid $GROUP_ID user
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN set -x && \
+  apt-get update -y && \
+  apt-get install -y --no-install-recommends build-essential wget gdb-multiarch ca-certificates python3 python-is-python3 ninja-build pkg-config libglib2.0-dev libpixman-1-dev xdelta3 unzip
+
+WORKDIR /qemu
+ADD ./qemu/add_broadway.patch .
+ADD ./docker/build_qemu.sh .
+RUN ./build_qemu.sh
+
+WORKDIR /devo
+RUN chown user:user /devo
+USER user
+ADD ./docker/extract.sh .
+ADD ./patches ./patches
+ADD ./scripts ./scripts
+RUN mkdir shared
