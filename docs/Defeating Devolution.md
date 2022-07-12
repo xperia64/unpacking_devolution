@@ -19,7 +19,7 @@ We've learned two things:
 
 ##### Finding `main`
 Time for some good old-fashioned static analysis.
-With the [Ghidra Gamecube Loader](https://github.com/Cuyler36/Ghidra-GameCube-Loader), we can load our raw binary payload at `0x93200000` and get to work.
+With the [Ghidra GameCube Loader](https://github.com/Cuyler36/Ghidra-GameCube-Loader), we can load our raw binary payload at `0x93200000` and get to work.
 The first thing we see is a short sequence of instructions that end with an `rfi` instruction.
 Between this and the initial loader.bin, it seems the author loves using `rfi` for branching.
 We can see this `rfi` branches to `0x13200040` (the physical-address-space equivalent of `0x93200040`), so lets mark this instruction as a `CALL_RETURN` in Ghidra to make things look nice, and resume analysis there.
@@ -61,7 +61,7 @@ Doing this, we locate many important functions:
 * USB Gecko initialization at `0xb32034cc`
 * SD card initialization at `0xb320f5b8`
 * USB storage initialization at `0xb321dd90`
-* And finally, a very interesting string: `Unable to verify ISO image - .DVV file error`, used in a function that also calls the SD/USB initialization functions; let's call this `important_boot_funciton`
+* And finally, a very interesting string: `Unable to verify ISO image - .DVV file error`, used in a function that also calls the SD/USB initialization functions; let's call this `important_boot_function`
 
 ##### Storage and Loading the DRM Validation Files
 Going through `important_boot_function`, we discover code that tries to locate the FAT partition on the storage device, and a custom FAT driver (which only supports 8.3 short names).
@@ -199,7 +199,7 @@ And as it turns out, this is actually done as a nice bit of abstraction with a f
 By forcing this function to always read from USB/SD storage, Devolution passes its own validation.
 I quickly wrote a small [PowerPC assembly memcpy program](https://github.com/xperia64/unpacking_devolution/blob/master/patches/preloader.bin) to copy Devolution's payload to 0x93200000 just like the real loader.bin, and also copy the game disc header+dummy BCA to `0x81466d80`, and just like that, I have a drop-in compatible loader.bin without the pesky disc check.
 All it took for Devolution's DRM to fall were two minimally-invasive patches and a checksum fix. The rest of the crazy DSP DRM math and other protections were for naught.
-What this means is that Family Wii's and  Wii U's can use Devolution without a 1st party Wii remote or disc validation on a backwards compatible Wii. Honestly I was surprised there weren't additional checks to break generating DVVs for these console IDs specifcially.
+What this means is that Family Wii's and  Wii U's can use Devolution without a 1st party Wii remote or disc validation on a backwards compatible Wii. Honestly I was surprised there weren't additional checks to break generating DVVs for these console IDs specifically.
 These patches work well on at least backwards-compatible Wii's, but I encountered some issues where games would not boot the first time you ran/validated them on the Wii U (and indeed, I also noticed some instability in games on the Wii when booting them for the first time), so I wrote a 3rd patch which produces a variant of Devolution which generates the DVV file, and exits immediately.
 Additionally, the generated DVVs are 100% compatible with an unmodified stock Devolution, so should any other issues appear with my patched version, the user can choose to use their original copy of Devolution r266.
 
