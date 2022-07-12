@@ -1,0 +1,5 @@
+For Wii:
+disc validation patch @ 0x9f34: 3F 40 01 46 63 5A 6D 80 67 5B A0 00 3C 60 00 00 7F 64 DB 78 38 A0 00 03 42 80 9A 81 38 60 00 03 42 80 04 1C
+disc access table patch @ 0xb8c4: B3 20 A7 74
+For Wii U (keygen variant):
+exit to HBC instead of booting the game @ 0x1546C: 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00 60 00 00 00
