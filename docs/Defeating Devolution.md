@@ -135,6 +135,7 @@ The PPC payload then reads this value back and does more DSP control register tw
 This is part of the normal DSP bootloading process, however, Devolution specifies IRAM and DRAM payloads of length 0, and uses `0x0080` from the mailbox as the DSP boot address.
 We now assume that the DSP continues execution from IRAM at `0x0080`, and by observing the sequence of mailbox accesses, this seems correct.
 The DSP payload stores a constant value of `0x1320 0000` somewhere, so it seems this could be our anti-tamper. Why else would the DSP be referencing the start of the PowerPC payload?
+
 Next, the DSP jumps into the middle of an IROM function once, then jumps further down into the same function multiple times in a loop.
 By going through the IROM, we locate a total of 4 functions that all seem to do weird math with slight variation, at IROM `0x854b`, `0x8644`, `0x8726`, and `0x880c`. What the heck are these?
 After quite a bit of searching, I located [this comment](https://github.com/dolphin-emu/dolphin/pull/5617#issuecomment-309256012) on a Dolphin PR which indicates that this function is related to memory card unlocking.
@@ -145,6 +146,7 @@ The DSP payload then multiplies that value by 4, and would you look at that, we 
 The first call to the middle of the function loops `0x974` times, and the loop that calls the later part of the function runs `0x30000/0x10000` times, with the loop in the called function running `0x10000` times.
 By examining the called function's loop, we can see that it reads the accelerator twice.
 Further DSP hardware tests determined that the Accelerator format used is 4-bit, so reading one byte requires 2 reads, and that's also why the accelerator address was multiplied by 2.
+
 Ultimately, this function as used by Devolution does a proprietary obfuscated hash of the PowerPC binary, and this gets mailed to the PowerPC.
 The DSP firmware requires that the lower 16-bits of the sum of the hash and the length of the payload equal `0xffff`, and DSP DMA of the rest of the DSP payload fails when the lower 16 bits are any other value.
 The PowerPC payload goes a step further and requires that the hash plus payload length XOR'd with `0x735f0000` equals `0x7FFFFFFF`. In other words, the final hash must equal `0x0c9df68b`
@@ -187,6 +189,7 @@ pokechu22   0198-019a checks that that value (0x3c/0x3d) and 0xfc is zero (i.e. 
 pokechu22   It then writes some stuff into the accelerator (which would clobber the 0x3e/0x3f values?), which only happens if these tests pass, and then jumps to 0202.
 pokechu22   If I'm understanding things correctly, a BCA composed of 0x34 zeros followed by 'PDMC' (50 44 4d 43) followed by 8 more zeros would pass.
 ```
+
 And indeed, Devolution accepts a blank BCA except for `PDMC`.
 Since we already have the disc header in memory (as Devolution requires us to pass when we boot it from our launcher), I picked a completely random address in MEM1 (`0xa1466d80`) and placed a buffer with the disc header and our BCA in the modified launcher, and told the disc validation function to pass that to the DSP instead.
 After verifying this worked, I wiped all the code in this disc validation function except for the part where it sends our buffer, and it still worked.
@@ -198,6 +201,7 @@ Devolution appears to read various sectors of the disc into a buffer, and the DS
 And as it turns out, this is actually done as a nice bit of abstraction with a function pointer table (if DVV good, read from USB/SD storage; else try to read from the real disc).
 By forcing this function to always read from USB/SD storage, Devolution passes its own validation.
 I quickly wrote a small [PowerPC assembly memcpy program](https://github.com/xperia64/unpacking_devolution/blob/master/patches/preloader.bin) to copy Devolution's payload to 0x93200000 just like the real loader.bin, and also copy the game disc header+dummy BCA to `0x81466d80`, and just like that, I have a drop-in compatible loader.bin without the pesky disc check.
+
 All it took for Devolution's DRM to fall were two minimally-invasive patches and a checksum fix. The rest of the crazy DSP DRM math and other protections were for naught.
 What this means is that Family Wii's and  Wii U's can use Devolution without a 1st party Wii remote or disc validation on a backwards compatible Wii. Honestly I was surprised there weren't additional checks to break generating DVVs for these console IDs specifically.
 These patches work well on at least backwards-compatible Wii's, but I encountered some issues where games would not boot the first time you ran/validated them on the Wii U (and indeed, I also noticed some instability in games on the Wii when booting them for the first time), so I wrote a 3rd patch which produces a variant of Devolution which generates the DVV file, and exits immediately.
