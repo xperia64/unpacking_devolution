@@ -117,7 +117,7 @@ Additionally at this time, I also determined whether Devolution cares about the 
 
 ##### Oops, I Accidentally Flipped the Endianness of my CPU
 As it turns out, the first thing this function does is twiddle with the PowerPC MSRs to enable PowerPC little-endian mode.
-That still doesn't explain the funky control flow.... [Oh.](https://www.nxp.com/files-static/product/doc/MPCFPE32B.pdf?&srch=1#G9.105725).
+That still doesn't explain the funky control flow.... [Oh.](http://web.archive.org/web/20220921155414/https://www.nxp.com/files-static/product/doc/MPCFPE32B.pdf#G9.105725).
 PowerPC little-endian mode is incredibly misleading and only messes with how data addresses are interpreted rather than the data itself. Evidently this also applies to instruction fetches, so instructions that would normally run `0, 1, 2, 3` instead run `1, 0, 3, 2` in little-endian mode.
 I've written a Ghidra script to flip 4-byte words around to untangle this function [here](https://github.com/xperia64/unpacking_devolution/blob/master/scripts/munge_ghidra.py) (note that you must clear the code first before running it).
 
